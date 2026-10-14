@@ -124,7 +124,10 @@ async function getWeather(latitude, longitude) {
     daily: [
       "weather_code",
       "temperature_2m_max",
-      "temperature_2m_min"
+      "temperature_2m_min",
+      "precipitation_probability_max",
+      "sunrise",
+      "sunset"
     ].join(","),
     forecast_days: "5",
     timezone: "auto"
@@ -193,6 +196,22 @@ function displayCurrentWeather(place, weather) {
   weatherResult.hidden = false;
 }
 
+function formatTime(dateTime) {
+  if (!dateTime) return "Unavailable";
+
+  const date = new Date(dateTime);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Unavailable";
+  }
+
+  return date.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true
+  });
+}
+
 // Display the forecast array using a loop.
 function displayForecast(weather) {
   const daily = weather.daily;
@@ -252,8 +271,19 @@ function displayForecast(weather) {
       daily.temperature_2m_min[index]
     );
 
+    const rainChance = daily.precipitation_probability_max?.[index];
+    const sunrise = daily.sunrise?.[index];
+    const sunset = daily.sunset?.[index];
+
+    const details = document.createElement("div");
+    details.className = "forecast-details";
+    details.textContent =
+      `Rain: ${rainChance ?? "N/A"}% | ` +
+      `Sunrise: ${formatTime(sunrise)} | ` +
+      `Sunset: ${formatTime(sunset)}`;
+
     temperatures.append(high, low);
-    day.append(info, icon, temperatures);
+    day.append(info, icon, temperatures, details);
     forecastList.append(day);
   });
 }

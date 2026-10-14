@@ -374,3 +374,12 @@ footer a {
     font-size: 12px;
   }
 }
+
+.forecast-details {
+  grid-column: 1 / -1;
+  padding-top: 8px;
+  border-top: 1px solid #e3ebf3;
+  color: #718399;
+  font-size: 12px;
+  line-height: 1.8;
+}
