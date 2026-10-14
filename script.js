@@ -4,9 +4,31 @@ const cityInput = document.getElementById("city");
 const searchButton = document.getElementById("search-button");
 const statusMessage = document.getElementById("status");
 const weatherResult = document.getElementById("weather-result");
+const forecastList = document.getElementById("forecast-list");
 
-// Convert weather codes into readable descriptions and icons.
-function getWeatherDescription(code, isDay) {
+const celsiusButton = document.getElementById("celsius-button");
+const fahrenheitButton = document.getElementById("fahrenheit-button");
+
+// Application state: remember the last successful weather result.
+let currentPlace = null;
+let currentWeather = null;
+let temperatureUnit = "C";
+
+// Convert Celsius to Fahrenheit when needed.
+function convertTemperature(celsius) {
+  if (temperatureUnit === "F") {
+    return (celsius * 9 / 5) + 32;
+  }
+
+  return celsius;
+}
+
+function formatTemperature(celsius) {
+  return `${Math.round(convertTemperature(celsius))}°${temperatureUnit}`;
+}
+
+// Translate Open-Meteo weather codes into descriptions and icons.
+function getWeatherDescription(code, isDay = true) {
   if (code === 0) {
     return { text: "Clear sky", icon: isDay ? "☀️" : "🌙" };
   }
@@ -58,7 +80,7 @@ function getWeatherDescription(code, isDay) {
   return { text: "Conditions unavailable", icon: "🌡️" };
 }
 
-// Find a city's coordinates using its name.
+// Find a city and obtain its coordinates.
 async function findCity(cityName) {
   const params = new URLSearchParams({
     name: cityName,
@@ -72,22 +94,22 @@ async function findCity(cityName) {
   );
 
   if (!response.ok) {
-    throw new Error("Could not search for the city. Try again.");
+    throw new Error("City search failed. Please try again.");
   }
 
   const data = await response.json();
 
   if (!data.results || data.results.length === 0) {
     throw new Error(
-      "City not found. Check the spelling or try adding the country."
+      "City not found. Check the spelling or add its country."
     );
   }
 
   return data.results[0];
 }
 
-// Request current weather for the city's coordinates.
-async function getCurrentWeather(latitude, longitude) {
+// Fetch current conditions and a five-day forecast.
+async function getWeather(latitude, longitude) {
   const params = new URLSearchParams({
     latitude: String(latitude),
     longitude: String(longitude),
@@ -99,6 +121,12 @@ async function getCurrentWeather(latitude, longitude) {
       "weather_code",
       "wind_speed_10m"
     ].join(","),
+    daily: [
+      "weather_code",
+      "temperature_2m_max",
+      "temperature_2m_min"
+    ].join(","),
+    forecast_days: "5",
     timezone: "auto"
   });
 
@@ -107,20 +135,20 @@ async function getCurrentWeather(latitude, longitude) {
   );
 
   if (!response.ok) {
-    throw new Error("Could not retrieve weather data. Please try again.");
+    throw new Error("Weather request failed. Please try again.");
   }
 
   const data = await response.json();
 
-  if (!data.current) {
+  if (!data.current || !data.daily) {
     throw new Error("Weather data is unavailable for this location.");
   }
 
   return data;
 }
 
-// Display the retrieved weather on the page.
-function displayWeather(place, weather) {
+// Display the current weather.
+function displayCurrentWeather(place, weather) {
   const current = weather.current;
   const description = getWeatherDescription(
     current.weather_code,
@@ -133,11 +161,8 @@ function displayWeather(place, weather) {
     place.country
   ].filter(Boolean);
 
-  // Avoid repeating identical location labels.
-  const uniqueParts = [...new Set(locationParts)];
-
   document.getElementById("location-name").textContent =
-    uniqueParts.join(", ");
+    [...new Set(locationParts)].join(", ");
 
   document.getElementById("weather-icon").textContent =
     description.icon;
@@ -148,13 +173,13 @@ function displayWeather(place, weather) {
   );
 
   document.getElementById("temperature").textContent =
-    `${Math.round(current.temperature_2m)}°C`;
+    formatTemperature(current.temperature_2m);
 
   document.getElementById("condition").textContent =
     description.text;
 
   document.getElementById("feels-like").textContent =
-    `Feels like ${Math.round(current.apparent_temperature)}°C`;
+    `Feels like ${formatTemperature(current.apparent_temperature)}`;
 
   document.getElementById("humidity").textContent =
     `${current.relative_humidity_2m}%`;
@@ -163,14 +188,101 @@ function displayWeather(place, weather) {
     `${Math.round(current.wind_speed_10m)} km/h`;
 
   document.getElementById("local-time").textContent =
-    weather.current.time
-      ? `Local time: ${weather.current.time.replace("T", " ")}`
-      : "";
+    `Local time: ${current.time.replace("T", " ")}`;
 
   weatherResult.hidden = false;
 }
 
-// Handle the search form.
+// Display the forecast array using a loop.
+function displayForecast(weather) {
+  const daily = weather.daily;
+
+  forecastList.replaceChildren();
+
+  daily.time.forEach((date, index) => {
+    const description = getWeatherDescription(
+      daily.weather_code[index]
+    );
+
+    // Noon avoids date shifts caused by local timezone conversion.
+    const dateObject = new Date(`${date}T12:00:00`);
+
+    const dayName = index === 0
+      ? "Today"
+      : dateObject.toLocaleDateString("en", {
+          weekday: "short"
+        });
+
+    const dateLabel = dateObject.toLocaleDateString("en", {
+      day: "numeric",
+      month: "short"
+    });
+
+    const day = document.createElement("article");
+    day.className = "forecast-day";
+
+    const info = document.createElement("div");
+
+    const dayLabel = document.createElement("div");
+    dayLabel.className = "forecast-date";
+    dayLabel.textContent = `${dayName} · ${dateLabel}`;
+
+    const condition = document.createElement("div");
+    condition.className = "forecast-condition";
+    condition.textContent = description.text;
+
+    info.append(dayLabel, condition);
+
+    const icon = document.createElement("span");
+    icon.className = "forecast-icon";
+    icon.textContent = description.icon;
+    icon.setAttribute("aria-hidden", "true");
+
+    const temperatures = document.createElement("div");
+    temperatures.className = "forecast-temperatures";
+
+    const high = document.createElement("span");
+    high.textContent = formatTemperature(
+      daily.temperature_2m_max[index]
+    );
+
+    const low = document.createElement("span");
+    low.className = "forecast-low";
+    low.textContent = formatTemperature(
+      daily.temperature_2m_min[index]
+    );
+
+    temperatures.append(high, low);
+    day.append(info, icon, temperatures);
+    forecastList.append(day);
+  });
+}
+
+// Refresh both sections when the temperature unit changes.
+function updateTemperatureUnit(unit) {
+  temperatureUnit = unit;
+
+  celsiusButton.classList.toggle("active", unit === "C");
+  fahrenheitButton.classList.toggle("active", unit === "F");
+
+  celsiusButton.setAttribute("aria-pressed", String(unit === "C"));
+  fahrenheitButton.setAttribute("aria-pressed", String(unit === "F"));
+
+  if (currentPlace && currentWeather) {
+    displayCurrentWeather(currentPlace, currentWeather);
+    displayForecast(currentWeather);
+  }
+}
+
+celsiusButton.addEventListener("click", () => {
+  updateTemperatureUnit("C");
+});
+
+fahrenheitButton.addEventListener("click", () => {
+  updateTemperatureUnit("F");
+});
+
+// Search for a city and update the app.
 form.addEventListener("submit", async function (event) {
   event.preventDefault();
 
@@ -183,23 +295,26 @@ form.addEventListener("submit", async function (event) {
   }
 
   searchButton.disabled = true;
-  searchButton.textContent = "Searching...";
+  searchButton.textContent = "Loading...";
   statusMessage.className = "status";
-  statusMessage.textContent = `Finding weather for ${cityName}...`;
-  weatherResult.hidden = true;
+  statusMessage.textContent = `Loading weather for ${cityName}...`;
 
   try {
     const place = await findCity(cityName);
-
-    const weather = await getCurrentWeather(
+    const weather = await getWeather(
       place.latitude,
       place.longitude
     );
 
-    displayWeather(place, weather);
+    // Save the latest successful response.
+    currentPlace = place;
+    currentWeather = weather;
+
+    displayCurrentWeather(place, weather);
+    displayForecast(weather);
 
     statusMessage.textContent =
-      "Weather updated successfully.";
+      "Weather and forecast updated successfully.";
   } catch (error) {
     statusMessage.textContent =
       error.message || "Something went wrong. Please try again.";
@@ -211,5 +326,5 @@ form.addEventListener("submit", async function (event) {
   }
 });
 
-// Load an initial weather report when the page opens.
+// Load the default city when the page opens.
 form.requestSubmit();

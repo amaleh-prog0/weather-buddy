@@ -73,6 +73,22 @@
       </div>
     </section>
 
+    <section class="forecast-section">
+    <div class="forecast-heading">
+        <h2>5-Day Forecast</h2>
+        <div class="unit-toggle" aria-label="Temperature units">
+        <button id="celsius-button" class="unit-button active"
+                type="button" aria-pressed="true">°C</button>
+        <button id="fahrenheit-button" class="unit-button"
+                type="button" aria-pressed="false">°F</button>
+        </div>
+    </div>
+
+    <div id="forecast-list" class="forecast-list">
+        <p class="muted">Search for a city to load its forecast.</p>
+    </div>
+    </section>
+
     <footer>
       <p>Weather data provided by
         <a href="https://open-meteo.com/" target="_blank"
