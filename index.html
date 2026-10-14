@@ -1,0 +1,85 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#102b46">
+  <title>Weather Buddy | Live Weather</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <main class="weather-app">
+    <header class="app-header">
+      <div class="brand-icon">🌦️</div>
+      <div>
+        <h1>Weather Buddy</h1>
+        <p>Your weather, made simple.</p>
+      </div>
+    </header>
+
+    <form id="weather-form" class="search-form">
+      <label for="city">Search for a city</label>
+      <div class="search-row">
+        <input
+          id="city"
+          name="city"
+          type="text"
+          placeholder="e.g. Kampala, Uganda"
+          value="Entebbe"
+          autocomplete="off"
+          required
+        >
+        <button id="search-button" type="submit">Search</button>
+      </div>
+    </form>
+
+    <p id="status" class="status" role="status" aria-live="polite">
+      Search for a city to see its weather.
+    </p>
+
+    <section id="weather-result" class="weather-result" hidden>
+      <div class="location-row">
+        <div>
+          <p class="eyebrow">CURRENT WEATHER</p>
+          <h2 id="location-name">Entebbe</h2>
+          <p id="local-time" class="muted"></p>
+        </div>
+        <div id="weather-icon" class="weather-icon"
+             role="img" aria-label="Weather icon">🌤️</div>
+      </div>
+
+      <div class="temperature-row">
+        <p id="temperature" class="temperature">--°</p>
+        <div>
+          <p id="condition" class="condition">Loading...</p>
+          <p id="feels-like" class="muted">Feels like --°C</p>
+        </div>
+      </div>
+
+      <div class="weather-details">
+        <article class="detail-card">
+          <span class="detail-icon">💧</span>
+          <p class="detail-label">Humidity</p>
+          <p id="humidity" class="detail-value">--%</p>
+        </article>
+
+        <article class="detail-card">
+          <span class="detail-icon">💨</span>
+          <p class="detail-label">Wind speed</p>
+          <p id="wind" class="detail-value">-- km/h</p>
+        </article>
+      </div>
+    </section>
+
+    <footer>
+      <p>Weather data provided by
+        <a href="https://open-meteo.com/" target="_blank"
+           rel="noopener noreferrer">Open-Meteo</a>.
+      </p>
+      <p class="footer-note">Weather information may change throughout the day.</p>
+    </footer>
+  </main>
+</body>
+</html>
