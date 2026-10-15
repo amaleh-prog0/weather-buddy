@@ -39,64 +39,163 @@
       Search for a city to see its weather.
     </p>
 
-    <section id="weather-result" class="weather-result" hidden>
-      <div class="location-row">
-        <div>
-          <p class="eyebrow">CURRENT WEATHER</p>
-          <h2 id="location-name">Entebbe</h2>
-          <p id="local-time" class="muted"></p>
-        </div>
-        <div id="weather-icon" class="weather-icon"
-             role="img" aria-label="Weather icon">🌤️</div>
+    <section id="recent-places" class="recent-places" aria-labelledby="recent-places-title" hidden>
+      <div class="recent-places-heading">
+        <h2 id="recent-places-title">Recent places</h2>
+        <button id="clear-recent-places" class="clear-recent-button" type="button">
+          Clear
+        </button>
       </div>
-
-      <div class="temperature-row">
-        <p id="temperature" class="temperature">--°</p>
-        <div>
-          <p id="condition" class="condition">Loading...</p>
-          <p id="feels-like" class="muted">Feels like --°C</p>
-        </div>
-      </div>
-
-      <div class="weather-details">
-        <article class="detail-card">
-          <span class="detail-icon">💧</span>
-          <p class="detail-label">Humidity</p>
-          <p id="humidity" class="detail-value">--%</p>
-        </article>
-
-        <article class="detail-card">
-          <span class="detail-icon">💨</span>
-          <p class="detail-label">Wind speed</p>
-          <p id="wind" class="detail-value">-- km/h</p>
-        </article>
-      </div>
+      <ul id="recent-places-list" class="recent-places-list"></ul>
     </section>
 
-    <section class="forecast-section">
-    <div class="forecast-heading">
-        <h2>5-Day Forecast</h2>
-        <div class="unit-toggle" aria-label="Temperature units">
+    <nav class="page-tabs" role="tablist" aria-label="Weather pages">
+      <button
+        id="current-tab"
+        class="page-tab"
+        type="button"
+        role="tab"
+        aria-selected="true"
+        aria-controls="current-panel"
+        tabindex="0"
+      >Current</button>
+      <button
+        id="forecast-tab"
+        class="page-tab"
+        type="button"
+        role="tab"
+        aria-selected="false"
+        aria-controls="forecast-panel"
+        tabindex="-1"
+      >Forecast</button>
+      <button
+        id="assistant-tab"
+        class="page-tab"
+        type="button"
+        role="tab"
+        aria-selected="false"
+        aria-controls="assistant-panel"
+        tabindex="-1"
+      >AI Assistant</button>
+    </nav>
+
+    <section
+      id="current-panel"
+      class="page-panel"
+      role="tabpanel"
+      aria-labelledby="current-tab"
+      tabindex="0"
+    >
+      <section id="weather-result" class="weather-result" hidden>
+        <div class="location-row">
+          <div>
+            <p class="eyebrow">CURRENT WEATHER</p>
+            <h2 id="location-name">Entebbe</h2>
+            <p id="local-time" class="muted"></p>
+          </div>
+          <div id="weather-icon" class="weather-icon"
+               role="img" aria-label="Weather icon">🌤️</div>
+        </div>
+
+        <div class="temperature-row">
+          <p id="temperature" class="temperature">--°</p>
+          <div>
+            <p id="condition" class="condition">Loading...</p>
+            <p id="feels-like" class="muted">Feels like --°C</p>
+          </div>
+        </div>
+
+        <div class="weather-details">
+          <article class="detail-card">
+            <span class="detail-icon">💧</span>
+            <p class="detail-label">Humidity</p>
+            <p id="humidity" class="detail-value">--%</p>
+          </article>
+
+          <article class="detail-card">
+            <span class="detail-icon">💨</span>
+            <p class="detail-label">Wind speed</p>
+            <p id="wind" class="detail-value">-- km/h</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="recommendations-section">
+        <h2>Today at a glance</h2>
+        <p id="recommendation-intro">
+          Here's what the weather means for your day.
+        </p>
+        <ul id="recommendation-list">
+          <li>Search for a city to get weather advice.</li>
+        </ul>
+      </section>
+    </section>
+
+    <section
+      id="forecast-panel"
+      class="page-panel"
+      role="tabpanel"
+      aria-labelledby="forecast-tab"
+      tabindex="0"
+      hidden
+    >
+      <section class="forecast-section">
+        <div class="forecast-heading">
+          <h2>5-Day Forecast</h2>
+          <div class="unit-toggle" aria-label="Temperature units">
             <button id="celsius-button" class="unit-button active"
                 type="button" aria-pressed="true">°C</button>
             <button id="fahrenheit-button" class="unit-button"
                 type="button" aria-pressed="false">°F</button>
+          </div>
         </div>
-    </div>
 
-    <div id="forecast-list" class="forecast-list">
-        <p class="muted">Search for a city to load its forecast.</p>
-    </div>
+        <div id="forecast-list" class="forecast-list">
+          <p class="muted">Search for a city to load its forecast.</p>
+        </div>
+      </section>
     </section>
-    
-    <section class="recommendations-section">
-        <h2>🤖 Your Weather Assistant</h2>
-        <p id="recommendation-intro">
-            Here's what the weather means for your day.
-        </p>
-        <ul id="recommendation-list">
-            <li>Search for a city to get weather advice.</li>
-        </ul>
+
+    <section
+      id="assistant-panel"
+      class="page-panel"
+      role="tabpanel"
+      aria-labelledby="assistant-tab"
+      tabindex="0"
+      hidden
+    >
+      <section class="ai-chat-section">
+        <div class="chat-heading">
+          <span class="chat-avatar">🤖</span>
+          <div>
+            <h2>Ask Weather Buddy AI</h2>
+            <p>Personalized advice based on your local forecast.</p>
+          </div>
+        </div>
+
+        <div id="chat-messages" class="chat-messages"
+         aria-live="polite" aria-label="Chat conversation">
+          <div class="chat-message assistant-message">
+            Hi! Ask me about the weather, outdoor activities,
+            or what you should wear today.
+          </div>
+        </div>
+
+        <form id="chat-form" class="chat-form">
+          <input
+            id="chat-input"
+            type="text"
+            placeholder="e.g. Should I go hiking tomorrow?"
+            maxlength="1000"
+            autocomplete="off"
+            aria-label="Ask Weather Buddy AI"
+            required
+          />
+          <button id="chat-send" type="submit">Ask AI</button>
+        </form>
+
+        <p id="chat-status" class="chat-status" role="status"></p>
+      </section>
     </section>
 
     <footer>

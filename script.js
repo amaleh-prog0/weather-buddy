@@ -1,23 +1,155 @@
-
 const form = document.getElementById("weather-form");
 const cityInput = document.getElementById("city");
 const searchButton = document.getElementById("search-button");
 const statusMessage = document.getElementById("status");
 const weatherResult = document.getElementById("weather-result");
 const forecastList = document.getElementById("forecast-list");
+const recentPlacesSection = document.getElementById("recent-places");
+const recentPlacesList = document.getElementById("recent-places-list");
+const clearRecentPlacesButton = document.getElementById("clear-recent-places");
+const chatForm = document.getElementById("chat-form");
+const chatInput = document.getElementById("chat-input");
+const chatSendButton = document.getElementById("chat-send");
+const chatMessages = document.getElementById("chat-messages");
+const chatStatus = document.getElementById("chat-status");
+const pageTabs = [...document.querySelectorAll('[role="tab"]')];
+const pagePanels = [...document.querySelectorAll('[role="tabpanel"]')];
 
 const celsiusButton = document.getElementById("celsius-button");
 const fahrenheitButton = document.getElementById("fahrenheit-button");
+
+function activatePage(tab, moveFocus = false) {
+  const activePanelId = tab.getAttribute("aria-controls");
+
+  pageTabs.forEach((pageTab) => {
+    const isActive = pageTab === tab;
+    pageTab.setAttribute("aria-selected", String(isActive));
+    pageTab.tabIndex = isActive ? 0 : -1;
+  });
+
+  pagePanels.forEach((panel) => {
+    panel.hidden = panel.id !== activePanelId;
+  });
+
+  if (moveFocus) tab.focus();
+}
+
+pageTabs.forEach((tab, index) => {
+  tab.addEventListener("click", () => activatePage(tab));
+  tab.addEventListener("keydown", (event) => {
+    let nextIndex;
+
+    if (event.key === "ArrowRight") {
+      nextIndex = (index + 1) % pageTabs.length;
+    } else if (event.key === "ArrowLeft") {
+      nextIndex = (index - 1 + pageTabs.length) % pageTabs.length;
+    } else if (event.key === "Home") {
+      nextIndex = 0;
+    } else if (event.key === "End") {
+      nextIndex = pageTabs.length - 1;
+    }
+
+    if (nextIndex !== undefined) {
+      event.preventDefault();
+      activatePage(pageTabs[nextIndex], true);
+    }
+  });
+});
 
 // Application state: remember the last successful weather result.
 let currentPlace = null;
 let currentWeather = null;
 let temperatureUnit = "C";
+const recentPlacesStorageKey = "weatherBuddy.recentPlaces";
+const maxRecentPlaces = 5;
+
+function loadRecentPlaces() {
+  try {
+    const savedPlaces = JSON.parse(
+      localStorage.getItem(recentPlacesStorageKey) || "[]",
+    );
+
+    if (!Array.isArray(savedPlaces)) return [];
+
+    return savedPlaces
+      .filter(
+        (place) =>
+          place &&
+          typeof place.query === "string" &&
+          typeof place.label === "string",
+      )
+      .map((place) => ({
+        ...place,
+        key:
+          typeof place.key === "string"
+            ? place.key
+            : place.label.toLocaleLowerCase(),
+      }))
+      .slice(0, maxRecentPlaces);
+  } catch {
+    return [];
+  }
+}
+
+let recentPlaces = loadRecentPlaces();
+
+function renderRecentPlaces() {
+  recentPlacesList.replaceChildren();
+  recentPlacesSection.hidden = recentPlaces.length === 0;
+
+  recentPlaces.forEach((place) => {
+    const item = document.createElement("li");
+    const button = document.createElement("button");
+    button.className = "recent-place-button";
+    button.type = "button";
+    button.textContent = place.label;
+    button.setAttribute("aria-label", `Search weather for ${place.label}`);
+    button.addEventListener("click", () => {
+      cityInput.value = place.query;
+      form.requestSubmit();
+    });
+    item.appendChild(button);
+    recentPlacesList.appendChild(item);
+  });
+}
+
+function rememberRecentPlace(query, place) {
+  const label = [place.name, place.admin1, place.country]
+    .filter(Boolean)
+    .join(", ");
+  const key = String(place.id ?? label.toLocaleLowerCase());
+
+  recentPlaces = [
+    { query, label, key },
+    ...recentPlaces.filter((recentPlace) => recentPlace.key !== key),
+  ].slice(0, maxRecentPlaces);
+
+  renderRecentPlaces();
+
+  try {
+    localStorage.setItem(recentPlacesStorageKey, JSON.stringify(recentPlaces));
+  } catch {
+    // Keep the recent list usable for this session if storage is unavailable.
+  }
+}
+
+renderRecentPlaces();
+
+clearRecentPlacesButton.addEventListener("click", () => {
+  recentPlaces = [];
+  renderRecentPlaces();
+
+  try {
+    localStorage.removeItem(recentPlacesStorageKey);
+  } catch {
+    // The visible list is cleared even if storage is unavailable.
+  }
+});
 
 // Convert Celsius to Fahrenheit when needed.
 function convertTemperature(celsius) {
   if (temperatureUnit === "F") {
-    return (celsius * 9 / 5) + 32;
+    return (celsius * 9) / 5 + 32;
   }
 
   return celsius;
@@ -86,11 +218,11 @@ async function findCity(cityName) {
     name: cityName,
     count: "1",
     language: "en",
-    format: "json"
+    format: "json",
   });
 
   const response = await fetch(
-    `https://geocoding-api.open-meteo.com/v1/search?${params}`
+    `https://geocoding-api.open-meteo.com/v1/search?${params}`,
   );
 
   if (!response.ok) {
@@ -100,9 +232,7 @@ async function findCity(cityName) {
   const data = await response.json();
 
   if (!data.results || data.results.length === 0) {
-    throw new Error(
-      "City not found. Check the spelling or add its country."
-    );
+    throw new Error("City not found. Check the spelling or add its country.");
   }
 
   return data.results[0];
@@ -119,7 +249,7 @@ async function getWeather(latitude, longitude) {
       "apparent_temperature",
       "is_day",
       "weather_code",
-      "wind_speed_10m"
+      "wind_speed_10m",
     ].join(","),
     daily: [
       "weather_code",
@@ -127,14 +257,14 @@ async function getWeather(latitude, longitude) {
       "temperature_2m_min",
       "precipitation_probability_max",
       "sunrise",
-      "sunset"
+      "sunset",
     ].join(","),
     forecast_days: "5",
-    timezone: "auto"
+    timezone: "auto",
   });
 
   const response = await fetch(
-    `https://api.open-meteo.com/v1/forecast?${params}`
+    `https://api.open-meteo.com/v1/forecast?${params}`,
   );
 
   if (!response.ok) {
@@ -152,38 +282,30 @@ async function getWeather(latitude, longitude) {
 
 function getWeatherRecommendation(weather) {
   const temperature = weather.current.temperature_2m;
-  const rainChance =
-    weather.daily.precipitation_probability_max?.[0] ?? 0;
+  const rainChance = weather.daily.precipitation_probability_max?.[0] ?? 0;
 
   const recommendations = [];
 
   if (rainChance >= 60) {
-    recommendations.push(
-      "Carry an umbrella because rain is likely."
-    );
+    recommendations.push("Carry an umbrella because rain is likely.");
   } else {
-    recommendations.push(
-      "The chance of rain is relatively low."
-    );
+    recommendations.push("The chance of rain is relatively low.");
   }
 
   if (temperature >= 30) {
     recommendations.push(
-      "Stay hydrated and limit strenuous activity in the heat."
+      "Stay hydrated and limit strenuous activity in the heat.",
     );
   } else if (temperature <= 15) {
-    recommendations.push(
-      "Consider wearing a warm layer."
-    );
+    recommendations.push("Consider wearing a warm layer.");
   } else {
     recommendations.push(
-      "Temperatures look comfortable for many outdoor activities."
+      "Temperatures look comfortable for many outdoor activities.",
     );
   }
 
   return recommendations;
 }
-
 
 function displayRecommendations(weather) {
   const list = document.getElementById("recommendation-list");
@@ -202,36 +324,92 @@ function displayRecommendations(weather) {
   intro.textContent = "Here's what the weather means for your day.";
 }
 
+function addChatMessage(message, role) {
+  const element = document.createElement("div");
+  element.className = `chat-message ${role}-message`;
+  element.textContent = message;
+  chatMessages.appendChild(element);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+chatForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const question = chatInput.value.trim();
+  if (!question) return;
+
+  if (!currentPlace || !currentWeather) {
+    chatStatus.textContent = "Load a city's weather before asking a question.";
+    return;
+  }
+
+  const current = currentWeather.current;
+  const weather = {
+    city: currentPlace.name,
+    temperature_celsius: current.temperature_2m,
+    feels_like_celsius: current.apparent_temperature,
+    rain_probability:
+      currentWeather.daily.precipitation_probability_max?.[0] ?? null,
+    condition: getWeatherDescription(current.weather_code, current.is_day === 1)
+      .text,
+  };
+
+  addChatMessage(question, "user");
+  chatInput.value = "";
+  chatSendButton.disabled = true;
+  chatSendButton.textContent = "Thinking...";
+  chatStatus.textContent = "Weather Buddy is thinking...";
+
+  try {
+    const response = await fetch("http://localhost:3000/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, weather }),
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "The assistant could not answer.");
+    }
+
+    addChatMessage(data.answer, "assistant");
+    chatStatus.textContent = "";
+  } catch (error) {
+    chatStatus.textContent =
+      error.message || "The assistant could not answer right now.";
+  } finally {
+    chatSendButton.disabled = false;
+    chatSendButton.textContent = "Ask AI";
+  }
+});
+
 // Display the current weather.
 function displayCurrentWeather(place, weather) {
   const current = weather.current;
   const description = getWeatherDescription(
     current.weather_code,
-    current.is_day === 1
+    current.is_day === 1,
   );
 
-  const locationParts = [
-    place.name,
-    place.admin1,
-    place.country
-  ].filter(Boolean);
-
-  document.getElementById("location-name").textContent =
-    [...new Set(locationParts)].join(", ");
-
-  document.getElementById("weather-icon").textContent =
-    description.icon;
-
-  document.getElementById("weather-icon").setAttribute(
-    "aria-label",
-    description.text
+  const locationParts = [place.name, place.admin1, place.country].filter(
+    Boolean,
   );
 
-  document.getElementById("temperature").textContent =
-    formatTemperature(current.temperature_2m);
+  document.getElementById("location-name").textContent = [
+    ...new Set(locationParts),
+  ].join(", ");
 
-  document.getElementById("condition").textContent =
-    description.text;
+  document.getElementById("weather-icon").textContent = description.icon;
+
+  document
+    .getElementById("weather-icon")
+    .setAttribute("aria-label", description.text);
+
+  document.getElementById("temperature").textContent = formatTemperature(
+    current.temperature_2m,
+  );
+
+  document.getElementById("condition").textContent = description.text;
 
   document.getElementById("feels-like").textContent =
     `Feels like ${formatTemperature(current.apparent_temperature)}`;
@@ -260,7 +438,7 @@ function formatTime(dateTime) {
   return date.toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
-    hour12: true
+    hour12: true,
   });
 }
 
@@ -271,22 +449,21 @@ function displayForecast(weather) {
   forecastList.replaceChildren();
 
   daily.time.forEach((date, index) => {
-    const description = getWeatherDescription(
-      daily.weather_code[index]
-    );
+    const description = getWeatherDescription(daily.weather_code[index]);
 
     // Noon avoids date shifts caused by local timezone conversion.
     const dateObject = new Date(`${date}T12:00:00`);
 
-    const dayName = index === 0
-      ? "Today"
-      : dateObject.toLocaleDateString("en", {
-          weekday: "short"
-        });
+    const dayName =
+      index === 0
+        ? "Today"
+        : dateObject.toLocaleDateString("en", {
+            weekday: "short",
+          });
 
     const dateLabel = dateObject.toLocaleDateString("en", {
       day: "numeric",
-      month: "short"
+      month: "short",
     });
 
     const day = document.createElement("article");
@@ -313,15 +490,11 @@ function displayForecast(weather) {
     temperatures.className = "forecast-temperatures";
 
     const high = document.createElement("span");
-    high.textContent = formatTemperature(
-      daily.temperature_2m_max[index]
-    );
+    high.textContent = formatTemperature(daily.temperature_2m_max[index]);
 
     const low = document.createElement("span");
     low.className = "forecast-low";
-    low.textContent = formatTemperature(
-      daily.temperature_2m_min[index]
-    );
+    low.textContent = formatTemperature(daily.temperature_2m_min[index]);
 
     const rainChance = daily.precipitation_probability_max?.[index];
     const sunrise = daily.sunrise?.[index];
@@ -383,10 +556,7 @@ form.addEventListener("submit", async function (event) {
 
   try {
     const place = await findCity(cityName);
-    const weather = await getWeather(
-      place.latitude,
-      place.longitude
-    );
+    const weather = await getWeather(place.latitude, place.longitude);
 
     // Save the latest successful response.
     currentPlace = place;
@@ -395,9 +565,9 @@ form.addEventListener("submit", async function (event) {
     displayCurrentWeather(place, weather);
     displayForecast(weather);
     displayRecommendations(weather);
+    rememberRecentPlace(cityName, place);
 
-    statusMessage.textContent =
-      "Weather and forecast updated successfully.";
+    statusMessage.textContent = "Weather and forecast updated successfully.";
   } catch (error) {
     statusMessage.textContent =
       error.message || "Something went wrong. Please try again.";
