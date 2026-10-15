@@ -150,6 +150,58 @@ async function getWeather(latitude, longitude) {
   return data;
 }
 
+function getWeatherRecommendation(weather) {
+  const temperature = weather.current.temperature_2m;
+  const rainChance =
+    weather.daily.precipitation_probability_max?.[0] ?? 0;
+
+  const recommendations = [];
+
+  if (rainChance >= 60) {
+    recommendations.push(
+      "Carry an umbrella because rain is likely."
+    );
+  } else {
+    recommendations.push(
+      "The chance of rain is relatively low."
+    );
+  }
+
+  if (temperature >= 30) {
+    recommendations.push(
+      "Stay hydrated and limit strenuous activity in the heat."
+    );
+  } else if (temperature <= 15) {
+    recommendations.push(
+      "Consider wearing a warm layer."
+    );
+  } else {
+    recommendations.push(
+      "Temperatures look comfortable for many outdoor activities."
+    );
+  }
+
+  return recommendations;
+}
+
+
+function displayRecommendations(weather) {
+  const list = document.getElementById("recommendation-list");
+  const intro = document.getElementById("recommendation-intro");
+
+  const recommendations = getWeatherRecommendation(weather);
+
+  list.replaceChildren();
+
+  recommendations.forEach((recommendation) => {
+    const item = document.createElement("li");
+    item.textContent = recommendation;
+    list.appendChild(item);
+  });
+
+  intro.textContent = "Here's what the weather means for your day.";
+}
+
 // Display the current weather.
 function displayCurrentWeather(place, weather) {
   const current = weather.current;
@@ -342,6 +394,7 @@ form.addEventListener("submit", async function (event) {
 
     displayCurrentWeather(place, weather);
     displayForecast(weather);
+    displayRecommendations(weather);
 
     statusMessage.textContent =
       "Weather and forecast updated successfully.";

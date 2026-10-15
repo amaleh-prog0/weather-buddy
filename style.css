@@ -383,3 +383,34 @@ footer a {
   font-size: 12px;
   line-height: 1.8;
 }
+
+
+.recommendations-section {
+  margin-top: 24px;
+  padding: 20px;
+  background: #eef7ff;
+  border: 1px solid #d5eaff;
+  border-radius: 14px;
+}
+
+.recommendations-section h2 {
+  margin-top: 0;
+  font-size: 18px;
+  color: #174a75;
+}
+
+#recommendation-intro {
+  color: #526b83;
+  font-size: 14px;
+}
+
+#recommendation-list {
+  padding-left: 20px;
+  margin-bottom: 0;
+}
+
+#recommendation-list li {
+  margin: 10px 0;
+  line-height: 1.5;
+  color: #29445d;
+}
